@@ -33,7 +33,7 @@ The result: a per-project constraint system that AI coders pick up automatically
 ### Option A — Plugin marketplace (recommended)
 
 ```text
-/plugin marketplace add Zayhan/harness-engineering
+/plugin marketplace add Junhanliu-dev/harness-engineering
 /plugin install harness-engineering@harness-engineering
 ```
 
@@ -54,7 +54,7 @@ To update later:
 For users not on the plugin path, or while iterating:
 
 ```bash
-git clone https://github.com/Zayhan/harness-engineering ~/repos/harness-engineering
+git clone https://github.com/Junhanliu-dev/harness-engineering ~/repos/harness-engineering
 ln -sf ~/repos/harness-engineering/skills/harness-engineering ~/.claude/skills/harness-engineering
 ```
 
