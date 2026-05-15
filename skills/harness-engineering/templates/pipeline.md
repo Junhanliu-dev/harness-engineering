@@ -1,0 +1,89 @@
+# Development Pipeline
+
+## Stages
+
+### 1. Requirements Analysis
+- **Trigger:** New requirement received
+- **Load:** Read harness/skills/harness-requirements/SKILL.md
+- **Execute:** Main agent produces requirements doc
+- **Gate:** Requirements doc exists with acceptance criteria (≥ 2 criteria)
+- **Human checkpoint:** Confirm understanding before proceeding
+- **Output:** harness/changes/{slug}/requirements.md
+
+### 2. Requirements Review
+- **Trigger:** Requirements doc complete
+- **Load:** Read harness/skills/harness-review/SKILL.md
+- **Execute:** Main agent reviews the requirements doc
+- **Gate:** No P0/P1 findings remaining
+- **Limit:** Max 3 review rounds → escalate to human
+- **Output:** harness/changes/{slug}/review-record.md (append)
+
+### 3. Coding Implementation
+- **Trigger:** Requirements approved
+- **Load:** Spawn `harness-coder` agent (see harness/agents/harness-coder.md)
+- **Execute:** Sub-agent implements per task decomposition
+- **Gate:** All sub-tasks done + code builds + lint passes
+- **Constraint:** One sub-agent invocation per sub-task
+- **Output:** Code changes + harness/changes/{slug}/coding-report.md
+
+### 4. Code Review
+- **Trigger:** Implementation complete
+- **Load:** Spawn `harness-reviewer` agent (see harness/agents/harness-reviewer.md)
+- **Execute:** Reviewer reads diff, checks against review skill
+- **Gate:** No P0 findings remaining
+- **Limit:** Max 2 review rounds → escalate to human
+- **Rollback:** P0 found → back to Stage 3 (re-spawn coder with review findings)
+- **Output:** harness/changes/{slug}/review-record.md (append)
+
+### 5. Test Writing
+- **Trigger:** Code review passed
+- **Load:** Spawn `harness-coder` agent with testing skill
+- **Execute:** Write tests for changed interfaces
+- **Gate:** Tests exist for every changed public interface + tests pass
+
+### 6. Test Review
+- **Trigger:** Tests written
+- **Load:** Spawn `harness-reviewer` agent
+- **Execute:** Review tests for meaningfulness
+- **Gate:** Tests are meaningful (not just "passes"), cover edge cases
+- **Limit:** Max 2 rounds → escalate
+
+### 7. Code Push
+- **Trigger:** Tests reviewed
+- **Gate (PROGRAMMATIC):**
+  - `git status` shows clean working tree (all staged/committed)
+  - Branch name matches convention
+  - No merge conflicts
+- **Human checkpoint:** Confirm push target
+
+### 8. CI Verification
+- **Gate (PROGRAMMATIC — all must be true):**
+  - `ci_status == "success"`
+  - `total_tests > 0`
+  - `tests_passed == total_tests`
+  - `lint_errors == 0`
+- **Verify by:** Running CI command or reading CI output
+- **Rollback:**
+  - `total_tests == 0` → Stage 5
+  - Compile/build failure → Stage 3
+  - Lint failure → Stage 3
+- **Output:** harness/changes/{slug}/ci-result.md
+
+### 9. Deployment Verification
+- **Human checkpoint:** Confirm deployment parameters
+- **Gate:** Health/smoke check passes in target environment
+
+### 10. User Confirmation
+- **Human checkpoint:** Final delivery acceptance
+
+## Rollback Rules
+- Rollback targets the EARLIEST stage where the failure originated
+- Never rollback more than 3 stages at once — escalate instead
+- Each rollback increments a counter; >3 total rollbacks → human takeover
+
+## Review Cycle Limits
+| Review Type | Max Rounds | On Exceed |
+|-------------|-----------|-----------|
+| Requirements | 3 | Human decision |
+| Code | 2 | Human decision |
+| Test | 2 | Human decision |
